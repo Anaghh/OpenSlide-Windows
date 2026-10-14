@@ -1,0 +1,37 @@
+/* OpenSlide 0.2: clear hierarchy without increasing the compact window bounds. */
+#panel{border-radius:18px;box-shadow:inset 0 1px 0 #ffffff0a}
+header .brand strong{font-weight:650;letter-spacing:-.025em}
+nav{box-shadow:inset 0 0 0 1px var(--border)}
+nav button{font-weight:500;transition:background .16s,color .16s,box-shadow .16s}
+nav button.selected{background:color-mix(in srgb,var(--accent) 12%,var(--surface));box-shadow:0 1px 4px #00000015,inset 0 0 0 1px var(--border);color:var(--text);font-weight:650}
+body.light nav button.selected{background:#fff;color:#2d4538}
+.icon-btn:hover{background:var(--surface);color:var(--text)}
+.card-heading h2{font-weight:600;letter-spacing:-.012em}
+#timer{font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.055em}
+.focus-card .dark-button{background:#2f4139;color:#f6f8f3;box-shadow:inset 0 1px 0 #ffffff14}
+.focus-badge{font-size:.6rem;font-weight:550;letter-spacing:.02em;background:#263e2d15;color:#34533d;border-radius:5px;padding:3px 5px;white-space:nowrap}
+.task-row{border-radius:6px;transition:background .15s}
+.task-row:hover{background:#ffffff20}
+.task-row.active{background:#ffffff40}
+.task-row.active .task-timer{color:#284932;font-weight:600}
+.task-title{letter-spacing:-.012em}
+.task-title small{line-height:1.5}
+.task-action[data-action=edit]:hover,.task-timer:hover{background:#ffffff55!important}
+.task-drag:hover{opacity:.75}
+.tasks-card .empty{padding:10px 2px;color:var(--muted)}
+.tasks-card .empty strong{font-size:.85rem;font-weight:550;color:var(--text)}
+.tasks-card .empty span{display:block;margin-top:3px;font-size:.75rem;line-height:1.45}
+#task-title:focus{outline:none}
+#add-task:focus-within{border-top-color:#35513d88}
+#add-task button{background:#ffffff65!important;font-weight:550}
+#note{line-height:1.55}
+.notes-footer{opacity:.85}
+.settings-group>h2{font-weight:600;letter-spacing:-.02em}
+.settings-group p{line-height:1.6}
+.about{padding:12px;color:var(--muted);line-height:1.7}
+body:is(.bottom-left,.bottom-right) #chart{height:clamp(70px,calc(100dvh - 26rem),125px)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#workspace button:focus-visible,#workspace input:focus-visible,#workspace textarea:focus-visible,#workspace select:focus-visible{outline-color:#395540}
+@media(max-width:360px){.focus-badge{font-size:.55rem;padding:2px 4px}}
+@media(prefers-reduced-motion:reduce){nav button,.task-row{transition:none}}
+@media(forced-colors:active){nav button.selected,.task-row.active{background:Highlight!important;color:HighlightText!important}.focus-badge{background:Canvas!important;color:CanvasText!important}.task-row.active .task-timer{color:HighlightText!important}}
