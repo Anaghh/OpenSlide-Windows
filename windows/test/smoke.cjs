@@ -1,0 +1,122 @@
+'use strict';
+const { _electron: electron } = require('playwright');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const fs = require('node:fs');
+const root = path.resolve(__dirname,'../..');
+const output = path.join(root,'.test-output'); fs.mkdirSync(output,{recursive:true});
+const dataDir = fs.mkdtempSync(path.join(output,'smoke-'));
+const errors=[];
+async function launch() {
+  const packaged = process.env.OPENSLIDE_TEST_EXE;
+  const env = { ...process.env }; delete env.ELECTRON_RUN_AS_NODE;
+  return electron.launch({ executablePath: packaged || require('electron'), args:[...(packaged ? [] : [root]), '--test-mode', `--data-dir=${dataDir}`], env });
+}
+async function workspace(app) {
+  await app.firstWindow();
+  for (let i=0;i<100;i++) { const page=app.windows().find(p => p.url().endsWith('/index.html')); if (page) return page; await new Promise(resolve => setTimeout(resolve,100)); }
+  throw Error('Workspace window did not load.');
+}
+(async () => {
+  let app = await launch();
+  try {
+    let page = await workspace(app);
+    await app.evaluate(({screen,BrowserWindow}) => { globalThis.testCursor=null; screen.getCursorScreenPoint=()=>{if(globalThis.testCursor)return globalThis.testCursor;const b=BrowserWindow.getAllWindows().find(w=>!w.webContents.getURL().includes('handle=1')).getBounds();return{x:b.x+80,y:b.y+80};}; });
+    page.on('pageerror',e => errors.push(e.message));
+    await page.waitForFunction(() => document.querySelector('#day').value !== '');
+    assert.equal(await page.title(),'OpenSlide');
+    await page.locator('#task-title').fill('Write the Windows port'); await page.locator('#add-task button').click();
+    await page.locator('.task-title').filter({hasText:'Write the Windows port'}).waitFor();
+    await page.locator('#note').fill('A note that survives reopening.');
+    await page.locator('#note').press('Control+Enter');
+    await page.locator('.task-title').filter({hasText:'A note that survives reopening.'}).waitFor();
+    await page.locator('.task-action[data-action=focus]').first().click();
+    await page.waitForFunction(() => document.querySelector('#toggle-timer').textContent.includes('Pause'));
+    const taskClock = page.locator('[data-clock]').first();
+    await page.waitForFunction(() => document.querySelector('[data-clock]').textContent !== '25:00');
+    assert.equal(await taskClock.textContent(),await page.locator('#timer').textContent());
+    await page.locator('.task-timer[data-action=pause]').click();
+    const paused = await taskClock.textContent();
+    await page.waitForTimeout(700); assert.equal(await taskClock.textContent(),paused);
+    await page.locator('.task-timer[data-action=focus]').first().click();
+    await page.waitForFunction(() => document.querySelector('#toggle-timer').textContent.includes('Pause'));
+    await page.locator('#toggle-timer').click();
+    await page.locator('.task-title').first().click();
+    await page.locator('#edit-title').fill('Ship OpenSlide');
+    await page.locator('#edit-duration').fill('45');
+    await page.locator('#task-options').click();await page.locator('#remind-soon').click();
+    await page.locator('#edit-form button[type=submit]').click();
+    await page.locator('.reminder-row').waitFor();
+    await page.locator('[data-page=settings]').click();
+    await page.locator('[data-pref=corner]').selectOption('top-right');
+    await page.locator('[data-pref=theme]').selectOption('light');
+    await page.waitForFunction(() => document.body.classList.contains('light'));
+    await page.screenshot({path:path.join(output,'settings-light.png')});
+    await page.locator('[data-pref=corner]').selectOption('top-center');
+    await page.locator('[data-page=calendar]').click();
+    await page.locator('#month-grid button').first().waitFor();
+    const month = await page.locator('#month-label').textContent();
+    await page.locator('#month-next').click(); assert.notEqual(await page.locator('#month-label').textContent(),month);
+    await page.locator('#calendar-today').click(); assert.equal(await page.locator('#month-label').textContent(),month);
+    await page.waitForFunction(() => document.querySelector('#calendar-status').textContent.includes('Connect Google'));
+    const layout = await page.evaluate(() => {
+      const month=document.querySelector('.calendar-card').getBoundingClientRect(),agenda=document.querySelector('#calendar .events-card').getBoundingClientRect();
+      return {width:innerWidth,height:innerHeight,columns:getComputedStyle(document.querySelector('#calendar')).gridTemplateColumns.split(' ').length,aligned:Math.abs(month.top-agenda.top)<2};
+    });
+    assert.ok(layout.width>layout.height); assert.ok(layout.columns>=2); assert.equal(layout.aligned,true);
+    await page.screenshot({path:path.join(output,'calendar-top.png')});
+    await page.locator('#pin').click();
+    await page.locator('#close').click(); await page.waitForTimeout(300);
+    const topHandle=app.windows().find(p=>p.url().includes('handle=1')); await topHandle.locator('#corner-handle').click();
+    await page.waitForFunction(() => !document.querySelector('#calendar').hidden);
+    assert.equal(await app.evaluate(({BrowserWindow,screen})=>{ const w=BrowserWindow.getAllWindows().find(w=>!w.webContents.getURL().includes('handle=1')).getBounds(),a=screen.getPrimaryDisplay().workArea;return Math.abs(w.x+w.width/2-(a.x+a.width/2))<=1 && w.y===a.y+12;}),true);
+    await page.locator('[data-page=settings]').click();
+    await page.locator('[data-pref=textSize]').selectOption('18');
+    await page.evaluate(()=>window.openslide.request('preferences',{width:340,corner:'bottom-right'}));
+    await page.locator('[data-page=workspace]').click();
+    assert.equal(await page.evaluate(()=>document.querySelector('main').scrollWidth<=document.querySelector('main').clientWidth),true);
+    await page.screenshot({path:path.join(output,'workspace-large-narrow.png')});
+    await page.locator('[data-page=settings]').click();
+    await page.evaluate(()=>window.openslide.request('preferences',{width:420,textSize:15}));
+    await page.locator('#pin').click();
+    await page.locator('[data-pref=theme]').selectOption('dark');
+    await page.locator('[data-pref=corner]').selectOption('bottom-right');
+    await page.locator('[data-pref=accent]').selectOption('mint');
+    await page.locator('[data-page=workspace]').click();
+    await page.screenshot({path:path.join(output,'workspace.png')});
+    await page.locator('#pin').click(); assert.equal(await page.locator('#pin').getAttribute('aria-pressed'),'true');
+    await page.locator('#close').click();
+    await page.waitForTimeout(300);
+    const hidden = await app.evaluate(({BrowserWindow}) => !BrowserWindow.getAllWindows().find(w => !w.webContents.getURL().includes('handle=1')).isVisible()); assert.equal(hidden,true);
+    const handle=app.windows().find(p => p.url().includes('handle=1')); assert.ok(handle);
+    await handle.locator('#corner-handle').click();
+    await page.waitForFunction(() => !document.querySelector('#panel').classList.contains('closed'));
+    await page.locator('[data-page=insights]').click();
+    await page.locator('#chart button').first().click();
+    assert.match(await page.locator('#chart-detail').textContent(), /minutes focused/);
+    await page.screenshot({path:path.join(output,'insights.png')});
+    await page.locator('#pin').click();
+    await page.locator('#close').click();
+    await page.waitForTimeout(1100);
+    await app.evaluate(({screen}) => { const b=screen.getPrimaryDisplay().bounds; globalThis.testCursor={x:b.x+b.width-1,y:b.y+b.height-1}; });
+    await page.waitForFunction(() => !document.querySelector('#panel').classList.contains('closed'));
+    assert.equal(await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>!w.webContents.getURL().includes('handle=1')).isVisible()),true);
+    await app.evaluate(({screen}) => { const b=screen.getPrimaryDisplay().bounds; globalThis.testCursor={x:b.x+100,y:b.y+100}; });
+    await page.waitForFunction(() => document.querySelector('#panel').classList.contains('closed'));
+    await page.waitForTimeout(300);
+    await handle.locator('#corner-handle').click();
+    const security=await page.evaluate(() => ({require:typeof window.require,node:typeof window.process})); assert.deepEqual(security,{require:'undefined',node:'undefined'});
+    await app.close(); app = await launch(); page = await workspace(app);
+    await page.waitForFunction(() => document.querySelector('#day').value !== '');
+    assert.equal(await page.locator('#note').inputValue(),'A note that survives reopening.');
+    assert.match(await page.locator('#tasks').textContent(), /Ship OpenSlide/);
+    const persisted=JSON.parse(fs.readFileSync(path.join(dataDir,'planner.json'),'utf8'));
+    assert.equal(persisted.tasks.length,2); assert.equal(persisted.preferences.corner,'bottom-right');
+    assert.equal(persisted.clock.startedAt,null); assert.equal(errors.length,0,errors.join('\n'));
+    console.log('PASS: task add/edit, reminder, focus, notes, note-to-task, preferences, panel collapse/reopen, simulated corner hover and auto-hide, insights, sandbox and persisted restart.');
+    console.log(`Screenshots: ${output}`);
+  } catch (error) {
+    for (const p of app.windows()) { console.error('Window:',p.url(), await p.locator('body').innerText().catch(()=>'')); await p.screenshot({path:path.join(output, p.url().includes('handle=1') ? 'handle-failure.png' : 'failure.png')}).catch(()=>{}); }
+    console.error('Renderer errors:',errors); throw error;
+  } finally { await app.close(); }
+})().catch(e => {console.error(e);process.exitCode=1;});

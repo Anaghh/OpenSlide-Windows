@@ -1,0 +1,20 @@
+'use strict';
+const {_electron:electron}=require('playwright');
+const assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs');
+const root=path.resolve(__dirname,'../..'),out=path.join(root,'.test-output');
+(async()=>{const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;const exe=process.env.OPENSLIDE_TEST_EXE;const app=await electron.launch({executablePath:exe||require('electron'),args:[...(exe?[]:[root]),'--test-mode','--data-dir='+fs.mkdtempSync(path.join(out,'theme-'))],env});let page;const errors=[];try{
+ await app.firstWindow();for(let n=0;n<100;n++){page=app.windows().find(p=>p.url().endsWith('/index.html'));if(page)break;await new Promise(r=>setTimeout(r,100));}await page.waitForFunction(()=>document.querySelector('#day').value);page.on('pageerror',e=>errors.push(e.message));await page.evaluate(()=>window.openslide.request('preferences',{autoHide:false}));
+ await page.locator('#day').click();await page.locator('#picker-grid button').first().waitFor();assert.equal(await page.locator('#date-picker').evaluate(e=>e.open),true);
+ await page.screenshot({path:path.join(out,'styled-date-picker.png')});
+ await page.locator('#picker-next').click();const chosen=await page.locator('#picker-grid button').nth(14).getAttribute('data-date');await page.locator('#picker-grid button').nth(14).click();assert.equal(await page.locator('#day').inputValue(),chosen);
+ await page.locator('#task-title').fill('A calmer day');await page.locator('#add-task button').click();await page.locator('.task-action[data-action=edit]').click();
+ await page.locator('#edit-day').click();await page.locator('#date-picker').press('Escape');assert.equal(await page.locator('#date-picker').evaluate(e=>e.open),false);assert.equal(await page.locator('#edit-dialog').evaluate(e=>e.open),true);
+ await page.locator('#reminder-day').click();const reminder=await page.locator('#picker-grid button').nth(24).getAttribute('data-date');await page.locator('#picker-grid button').nth(24).click();await page.locator('#reminder-time').fill('10:30');await page.locator('#reminder-time').press('Tab');assert.equal(await page.locator('#edit-reminder').inputValue(),reminder+'T10:30');
+ await page.locator('#edit-form button[type=submit]').click();await page.locator('.reminder-row').waitFor();
+ const sizes=await page.evaluate(()=>['#toggle-timer','#duration','#extend','#reset','#finish','#pin','#close','.task-check','.task-timer','.task-action[data-action=edit]','#add-task button'].map(s=>({s,h:document.querySelector(s).getBoundingClientRect().height})));for(const value of sizes)assert.ok(value.h>=29.5,JSON.stringify(value));
+ await page.locator('#day').click();const selected=page.locator('#picker-grid button.selected');await selected.press('ArrowRight');const focusDate=await page.evaluate(()=>document.activeElement.dataset.date);assert.notEqual(focusDate,chosen);await page.locator('#picker-cancel').click();assert.equal(await page.locator('#day').inputValue(),chosen);
+ await page.screenshot({path:path.join(out,'larger-workspace.png')});
+ await page.evaluate(()=>window.openslide.request('preferences',{corner:'top-center',theme:'light'}));await page.locator('[data-page=calendar]').click();await page.screenshot({path:path.join(out,'unified-calendar.png')});
+ await page.evaluate(()=>window.openslide.request('preferences',{corner:'bottom-right',width:340,textSize:18}));await page.locator('[data-page=workspace]').click();await page.locator('#day').click();assert.equal(await page.locator('#date-picker').evaluate(e=>e.scrollWidth<=e.clientWidth),true);await page.locator('#picker-cancel').click();assert.equal(await page.evaluate(()=>document.querySelector('main').scrollWidth<=document.querySelector('main').clientWidth),true);
+ assert.equal(errors.length,0,errors.join('\n'));console.log('PASS: themed date picker, date selection, nested Escape, reminder date/time, arrow-key navigation, compact 30px controls, top calendar and narrow layout.');
+}catch(e){if(page)await page.screenshot({path:path.join(out,'theme-failure.png')}).catch(()=>{});throw e;}finally{await app.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
