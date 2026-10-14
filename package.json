@@ -1,0 +1,63 @@
+{
+  "name": "openslide",
+  "productName": "OpenSlide",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Tasks, focus, notes, and calendars in a quiet Windows corner workspace.",
+  "author": "Anagh",
+  "homepage": "https://github.com/Anaghh/OpenSlide-Windows",
+  "repository": { "type": "git", "url": "https://github.com/Anaghh/OpenSlide-Windows.git" },
+  "bugs": { "url": "https://github.com/Anaghh/OpenSlide-Windows/issues" },
+  "license": "MIT",
+  "main": "windows/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "demo": "electron . --demo",
+    "test": "node --test windows/test/*.test.cjs",
+    "test:ui": "node windows/test/smoke.cjs",
+    "dist": "electron-builder --win nsis --x64 --publish never",
+    "pack": "electron-builder --win --x64 --dir",
+    "test:tasks": "node windows/test/management.cjs",
+    "test:theme": "node windows/test/theme.cjs",
+    "test:companion": "node windows/test/companion.cjs",
+    "test:responsive": "node windows/test/responsive.cjs",
+    "test:compact": "node windows/test/compact.cjs",
+    "test:dialogs": "node windows/test/dialog-layout.cjs",
+    "docs:demo": "node scripts/record-demo.cjs"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3",
+    "ffmpeg-static": "^5.3.0",
+    "playwright": "^1.63.0"
+  },
+  "build": {
+    "appId": "dev.openslide.app",
+    "productName": "OpenSlide",
+    "directories": {
+      "output": "dist-windows"
+    },
+    "files": [
+      "windows/**/*",
+      "!windows/test/**/*",
+      "package.json",
+      "LICENSE",
+      "NOTICE"
+    ],
+    "asar": true,
+    "win": {
+      "target": "nsis",
+      "icon": "windows/assets/icon.ico",
+      "signAndEditExecutable": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "OpenSlide",
+      "artifactName": "OpenSlide-Setup-${version}.${ext}"
+    }
+  }
+}

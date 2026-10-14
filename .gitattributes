@@ -1,0 +1,18 @@
+* text=auto
+*.js text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.svg text eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
+*.mp4 binary
+*.ico binary
+*.ttf binary
+*.otf binary
+# Keep upstream font-license text verbatim, including its existing whitespace.
+windows/assets/fonts/*-OFL.txt whitespace=-blank-at-eol

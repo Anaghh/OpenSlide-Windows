@@ -1,0 +1,17 @@
+OpenSlide — Windows corner workspace
+Copyright (c) 2026 Anagh
+Designed and maintained by Anagh (https://github.com/Anaghh).
+
+Third-party fonts
+-----------------
+Inter, DM Sans, Inconsolata and Roboto Condensed are distributed under the
+SIL Open Font License 1.1. Metropolis is distributed under the Unlicense.
+See windows/assets/fonts/README.md and the license texts included with the fonts.
+These fonts retain their own terms rather than the project's MIT license.
+
+Avenir is an optional system-font choice; its binaries are not distributed.
+
+Tutorial media
+--------------
+The README tutorial and screenshots show OpenSlide with synthetic tasks and
+notes. They do not contain personal desktop captures or calendar account data.

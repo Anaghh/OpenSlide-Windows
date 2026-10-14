@@ -1,0 +1,8 @@
+node_modules/
+dist-windows/
+.test-output/
+.npm-cache/
+.private-assets/
+*.enc
+google-credentials*.json
+client_secret*.json
