@@ -1,0 +1,70 @@
+name: Windows
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Package portable build and checksums
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $portable = "dist-windows/OpenSlide-Portable-$version-x64.zip"
+          Compress-Archive -Path dist-windows/win-unpacked/* -DestinationPath $portable
+          $installer = "dist-windows/OpenSlide-Setup-$version.exe"
+          $checksums = @($installer, $portable) | ForEach-Object {
+            $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $_
+            "$($hash.Hash.ToLower())  $(Split-Path -Leaf $_)"
+          }
+          $checksums | Set-Content -LiteralPath dist-windows/SHA256SUMS.txt -Encoding utf8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenSlide-Windows-x64
+          path: |
+            dist-windows/OpenSlide-Setup-*.exe
+            dist-windows/OpenSlide-Setup-*.exe.blockmap
+            dist-windows/OpenSlide-Portable-*.zip
+            dist-windows/SHA256SUMS.txt
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: OpenSlide-Windows-x64
+          path: release
+      - name: Publish installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already published; preserving its verified assets."
+          else
+            gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --title "OpenSlide $GITHUB_REF_NAME" --generate-notes
+          fi

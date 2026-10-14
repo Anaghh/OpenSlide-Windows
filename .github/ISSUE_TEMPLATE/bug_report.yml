@@ -1,0 +1,26 @@
+name: Bug report
+description: Report an OpenSlide problem with steps to reproduce it.
+title: '[Bug] '
+body:
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: Include the selected corner, layout, and theme if relevant.
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: OpenSlide and Windows versions
+      placeholder: OpenSlide 0.2.0, Windows 11 x64
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Screenshots or additional context
+      description: Remove personal tasks, notes, and calendar details before sharing.
